@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no, width=device-width">
+    <title></title>
+
+    <link href="css/style.css" rel="stylesheet">
+    <link href="lib/angular.tree.css" rel="stylesheet">
+    <link href="lib/bootstrap.min.css" rel="stylesheet">
+
+    <script src="lib/ionic/js/angular/angular-resource.js"></script>
+    <script src="lib/ui-bootstrap-tpls-0.1.0.js"></script>
+    <script src="lib/angular.treeview.js"></script>
+    
+    <script src="app.js"></script>
+
+  </head>
+  <body ng-app="apper">
+
+
+    <script type="text/ng-template" id="editor.html">
+    
+      <span class="dropdown" on-toggle="toggled(open)">
+        <ul class="dropdown-menu">
+          <li ng-repeat="app in apps">
+            <a href>{{app.name}}</a>
+          </li>
+        </ul>
+      </span>
+
+    </script>
+    
+
+  </body>
+</html>

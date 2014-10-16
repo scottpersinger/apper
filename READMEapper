@@ -1,0 +1,26 @@
+- Users authenticate with their Heroku account.
+- Users have a list of apps. They can create a new app and select a template
+to use.
+- Templates will have a client part and a server part.
+- Apps consist of a file tree which is stored in postgres.
+- Files can be edited using the online editor.
+
+- The main view is split into 2 panes:
+
+  | Editor pane | Runtime pane |
+
+The editor includes the file tree and the file edit pane.
+
+The runtime pane includes tabs for server, client, and server console.
+
+- The user can run their server any time. The server code is run in a Node
+subprocess and connections and sent from the main web process.
+
+- The master Node app includes a large set of packages that can be used by
+the server app. If you need another package you have to add it to the master
+package.json and re-deploy.
+
+- The console pane lets the user enter arbitrary code which is executed
+by the server process. If possible we should keep a consistent context
+so variables keep their values.
+
