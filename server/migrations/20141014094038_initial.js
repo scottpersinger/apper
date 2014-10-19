@@ -39,7 +39,7 @@ exports.up = function(knex, Promise) {
         return schema.createTable('files', function(table) {
           table.increments('id');
           table.integer('app_id').notNullable();
-          table.string('heroku_user_id').notNullable().index();
+          table.string('name').notNullable();
           table.string('path').notNullable().index();
           table.text('content');
           table.string('content_type');

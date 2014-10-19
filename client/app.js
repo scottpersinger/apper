@@ -1,28 +1,167 @@
-angular.module('apper', ['ngResource', 'ui.bootstrap', 'angularTreeview'])
+angular.module('apper', ['ngResource', 
+  'ui.bootstrap', 
+  'angularTreeview',
+  'angularTreeview',
+  'ui.router',
+  'ui.ace'])
 
 .config(function($stateProvider, $urlRouterProvider, $httpProvider) {
 
 // ************ APP ROUTING *****************
 
-  $stateProvider.state('editor', {
+  
+  $stateProvider
+  .state('root', {
+    controller: 'RootCtrl'
+  })
+
+  .state('root.editor', {
     url: "/editor",
     templateUrl: "editor.html"
-  })
+  });
+  
   // if none of the above states are matched, use this as the fallback
   $urlRouterProvider.otherwise('/editor');
 
 })
 
+.factory('AuthInterceptor', function ($rootScope, $window, $q, $location) {
+
+  return {
+      request: function (config) {
+          $rootScope.loading = true;
+          $rootScope.message = 'Saving...';
+          return config || $q.when(config);
+      },
+      requestError: function (request) {
+          console.log('request error');
+          $rootScope.loading = false;
+          return $q.reject(request);
+      },
+      response: function (response) {
+          $rootScope.loading = false;
+          return response || $q.when(response);
+      },
+      responseError: function (response) {
+          console.log(JSON.stringify(response));
+          $rootScope.loading = false;
+          return $q.reject(response);
+      }
+  };
+})
+
+// Add the AuthInterceptor declared above
+.config(function ($httpProvider) {
+    $httpProvider.interceptors.push('AuthInterceptor');
+})
+
+
 // ************ CONTROLLERS *****************
 
-.controller('EditorCtrl', function($scope, $location, Contact) {
-  $scope.apps = App.query();
+.controller('RootCtrl', function($rootScope, $scope, $modal, AppModel) {
+  $scope.apps = AppModel.query();
+  $rootScope.loading = true;
 
+  $scope.toggled = function(open) {
+    //console.log('Dropdown is now: ', open);
+  };
+
+  $scope.toggleDropdown = function($event) {
+    $event.preventDefault();
+    $event.stopPropagation();
+    $scope.status.isopen = !$scope.status.isopen;
+  };
+
+  $scope.openApp = function(app_id) {
+    $scope.$broadcast('openApp', app_id);
+  }
+
+  $rootScope.showMessage = function(msg) {
+    $scope.message = msg;
+    setTimeout(function() {
+      $scope.show_message = true;
+      $scope.$apply();
+    }, 2000);
+  }
+
+  $scope.newApp = function() {
+    $modal.open({
+      templateUrl: 'newapp-modal.html',
+      controller: 'NewAppCtrl'
+    });
+  }
+
+})
+
+.controller('NewAppCtrl', function($scope) {
+  $scope.name = '';
+})
+
+.controller('EditorCtrl', function($scope, $location, AppModel, FileModel) {
+  $scope.tagtree = {}; // Have to initialize this here or $watch doesn't work
+  $scope.fileTree = [];
+
+  $scope.fileNode = {content:''};
+
+  $scope.$on('openApp', function(event, app_id) {
+    FileModel.query({app_id: app_id, order: ['path','name']}, function(files) {
+      var root = [];
+      files.forEach(function(file) {
+        if (!file.path) {
+          root.push(file);
+        } else {
+          var node = root;
+          var paths = file.path.split("/");
+          paths.forEach(function(path) {
+            var entry = null;
+            node.forEach(function(item) {
+              if (item.name === path) {
+                entry = item;
+              }
+            });
+            if (!entry) {
+              entry = {name: path, id: path, children: []};
+              node.push(entry);
+            }
+            node = entry.children;
+          });
+          node.push(file);
+        }
+      });
+      $scope.fileTree = root;
+    });
+  });
+
+  $scope.$watch( 'tagtree.currentNode', function( newObj, oldObj ) {
+      if( $scope.tagtree && angular.isObject($scope.tagtree.currentNode) ) {
+        console.log( $scope.tagtree.currentNode.name );
+        $scope.fileNode = FileModel.get({fileId: $scope.tagtree.currentNode.id, select:'*'});
+      }
+  }, false);  
+
+  $scope.saver = null;
+
+  $scope.aceLoaded = function(_editor){
+    var _session = _editor.getSession();
+    _session.on("change", function(){ 
+      if (!$scope.saver) {
+        $scope.saver = setTimeout(function() {
+          $scope.saver = null;
+          var f = $scope.fileNode;
+          new FileModel({id: f.id, content:f.content}).$save();
+        }, 2000);
+      }
+    });
+  };
 })
 
 
 // ************ SERVER RESOURCES (via Ajax) *****************
 
-.factory('App', function($resource) {
+.factory('AppModel', function($resource) {
   return $resource('/resource/apps/:appId', null);
+})
+
+.factory('FileModel', function($resource) {
+  return $resource('/resource/files/:fileId', {select:['id','name','path']}, null);
 })

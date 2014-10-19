@@ -2,7 +2,7 @@ var express = require('express');
 
 module.exports = function(knex) {
   function getopts(req) {
-    var opts = {select: '*', limit: 50, where: null};
+    var opts = {select: '*', limit: 50, where: null, order: null};
       if (req.query.select) {
         opts.select = req.query.select;
         delete req.query['select'];
@@ -10,6 +10,10 @@ module.exports = function(knex) {
       if (req.query.limit) {
         opts.limit = parseInt(req.query.limit);
         delete req.query['limit'];
+      }
+      if (req.query.order) {
+        opts.order = req.query.order;
+        delete req.query['order'];
       }
       opts.where = req.query;
       return opts;
@@ -22,9 +26,16 @@ module.exports = function(knex) {
     router.get('/' + table, function(req, res, next) {
       var opts = getopts(req);
 
-      knex(table).select(opts.select).where(opts.where).limit(opts.limit).then(function(rows) {
+      var q = knex(table).select(opts.select).where(opts.where);
+      if (opts.order) {
+        opts.order.forEach(function(ordering) {
+          q = q.orderBy(ordering);
+        });
+      }
+      q.limit(opts.limit).then(function(rows) {
         res.json(rows);
       }).catch(function(err) {
+        console.log(err);
         res.status(500).json(err);
       });
     });
