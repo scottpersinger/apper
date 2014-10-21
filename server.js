@@ -5,7 +5,8 @@ var http           = require('http'),
     methodOverride = require('method-override'),
     path           = require('path'),
     knex           = require('knex')(config.knex_options),
-    restful        = require('./server/restful_knex')(knex)
+    restful        = require('./server/restful_knex')(knex),
+    actions        = require('./server/actions')(knex)
     ;
 
 console.log("Connecting to ", config.knex_options);
@@ -38,9 +39,10 @@ app.use(function(err, req, res, next) {
   res.status(500).send(err.message);
 });
 
-
 /********************* ROUTES *****************************/
-app.use('/resource/', restful('apps'));
+
+
+app.use('/resource/', restful('apps', {after_create: actions.initialize_app}));
 app.use('/resource/', restful('files'));
 
 

@@ -62,8 +62,19 @@ module.exports = function(knex) {
           res.status(500).json(err);
         });
       } else {
-        knex(table).insert(item).then(function(row) {
-          res.json(row);
+        knex(table).insert(item, 'id').then(function(id_arr) {
+          item.id = id_arr[0];
+          if (options.after_create) {
+            options.after_create(item, function(err, result) {
+              if (err) {
+                res.status(500).send(err);
+              } else {
+                res.json(item);
+              }
+            });
+          } else {
+            res.json(item);
+          }
         }).catch(function(err) {
           console.log(err);
           res.status(500).json(err);

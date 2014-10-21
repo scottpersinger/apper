@@ -58,7 +58,7 @@ angular.module('apper', ['ngResource',
 
 // ************ CONTROLLERS *****************
 
-.controller('RootCtrl', function($rootScope, $scope, $modal, AppModel) {
+.controller('RootCtrl', function($rootScope, $scope, $modal, $log, AppModel) {
   $scope.apps = AppModel.query();
   $rootScope.loading = true;
 
@@ -85,16 +85,42 @@ angular.module('apper', ['ngResource',
   }
 
   $scope.newApp = function() {
-    $modal.open({
+    var modalInstance = $modal.open({
       templateUrl: 'newapp-modal.html',
       controller: 'NewAppCtrl'
+    });
+
+    modalInstance.result.then(function (opts) {
+      $log.info("New app link ", opts);
+      new AppModel({name: opts.name, heroku_user_id: 1, repository: opts.repository}).$save(function() {
+        $scope.apps = AppModel.query();
+      }, function(err) {
+        alert("Error creating app " + err);
+      });
+    }, function () {
+      $log.info('Modal dismissed at: ' + new Date());
     });
   }
 
 })
 
-.controller('NewAppCtrl', function($scope) {
-  $scope.name = '';
+.controller('NewAppCtrl', function($scope, $modalInstance) {
+  $scope.opts = {
+    name: '',
+    repository: 'https://github.com/heroku/mobile-template1'
+  };
+
+  $scope.ok = function () {
+    if ($scope.opts.name.length < 3) {
+      return alert("Please enter an app name, at least 3 characters");
+    }
+    $modalInstance.close($scope.opts);
+  };
+
+  $scope.cancel = function () {
+      $modalInstance.dismiss('cancel');
+  };
+
 })
 
 .controller('EditorCtrl', function($scope, $location, AppModel, FileModel) {
@@ -163,5 +189,5 @@ angular.module('apper', ['ngResource',
 })
 
 .factory('FileModel', function($resource) {
-  return $resource('/resource/files/:fileId', {select:['id','name','path']}, null);
+  return $resource('/resource/files/:fileId', {select:['id','name','path'],limit:300}, null);
 })

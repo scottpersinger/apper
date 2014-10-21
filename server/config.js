@@ -3,7 +3,7 @@ DEBUG = true;
 exports.db_client = 'pg';
 exports.db_url = 'postgresql://localhost/apper';
 exports.DEBUG = DEBUG;
-exports.SQL_DEBUG = true;
+exports.SQL_DEBUG = false;
 exports.ADMIN_TOKEN = 'abc';
 exports.ADMIN_USER_ID = 1;
 

@@ -26,6 +26,7 @@ exports.up = function(knex, Promise) {
           table.increments('id');
           table.string('heroku_user_id').notNullable().index();
           table.string('name').notNullable();
+          table.string('repository');
           table.timestamps();
         });
       } else {

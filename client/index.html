@@ -13,7 +13,7 @@
     <script type="text/javascript" src="lib/ionic/js/angular-ui/angular-ui-router.js"></script>
 
     <script src="lib/ionic/js/angular/angular-resource.js"></script>
-    <script src="lib/ui-bootstrap-tpls-0.1.0.js"></script>
+    <script src="lib/ui-bootstrap-tpls-0.10.0.js"></script>
     <script src="lib/angular.treeview.js"></script>
     
     <!-- ACE editor -->
@@ -79,9 +79,12 @@
       <div class="modal-header">
           <h3 class="modal-title">Create new app</h3>
       </div>
-      <form>
-        <input type="text" class="form-control" placeholder="App name"></input>
-      </form>
+      <div class="modal-body">
+        <form>
+          <input type="text" class="form-control" placeholder="Name" ng-model="opts.name"></input>
+          <input type="text" class="form-control" placeholder="Github repository" ng-model="opts.repository"></input>
+        </form>
+      </div>
       <div class="modal-footer">
           <button class="btn btn-primary" ng-click="ok()">OK</button>
           <button class="btn btn-warning" ng-click="cancel()">Cancel</button>
