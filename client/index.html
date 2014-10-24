@@ -43,6 +43,9 @@
             <li>
               <button class="btn btn-default navbar-btn" style="margin-left:20px" ng-click="newApp()">New App</button>
             </li>
+            <li>
+              <button class="btn btn-default navbar-btn" style="margin-left:20px" ng-click="runApp()">Run</button>
+            </li>
   
             <li ng-show="loading">{{message}}</li>
   
@@ -52,7 +55,7 @@
     </nav>
 
 
-    <div ui-view>
+    <div ui-view style="width:100%;height:100%">
     </div>
 
     <script type="text/ng-template" id="editor.html">
@@ -73,8 +76,11 @@
         </div>
       </div>
 
+      <iframe src="/mt1/" style="float:left;margin-left:20px;width:500px;height:100%" ng-show="running"/>
+
     </script>
-    
+
+
     <script type="text/ng-template" id="newapp-modal.html">
       <div class="modal-header">
           <h3 class="modal-title">Create new app</h3>

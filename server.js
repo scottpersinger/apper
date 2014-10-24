@@ -6,7 +6,8 @@ var http           = require('http'),
     path           = require('path'),
     knex           = require('knex')(config.knex_options),
     restful        = require('./server/restful_knex')(knex),
-    actions        = require('./server/actions')(knex)
+    actions        = require('./server/actions')(knex),
+    child_process  = require('child_process')
     ;
 
 console.log("Connecting to ", config.knex_options);
@@ -43,8 +44,8 @@ app.use(function(err, req, res, next) {
 
 
 app.use('/resource/', restful('apps', {after_create: actions.initialize_app}));
+app.post('/resource/apps/:app_id/$run', actions.run_app);
 app.use('/resource/', restful('files'));
-
 
 /********************* SERVER STARTT *****************************/
 

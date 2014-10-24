@@ -5,6 +5,9 @@ var popen      = require('child_process'),
     basename   = require('path').basename,
     dirname    = require('path').dirname,
     walkdir    = require('walkdir'),
+    httpProxy  = require('http-proxy'),
+    async      = require('async'),
+    Promise    = require("knex/node_modules/bluebird"),
     app_target = '_app_source'
     ;
 
@@ -57,15 +60,67 @@ module.exports = function(knex) {
 		});
 	}
 
+  function unpack_app_files(app_id) {
+    var app_root = app_target + "/" + "app" + app_id;
+
+    return new Promise(function(resolver, rejecter) {
+      return knex('files').select('*').where({app_id: app_id})
+      .then(function(rows) {
+        async.eachSeries(rows, function(row) {
+          fs.mkdirs(app_root + "/" + row.path, function(err) {
+            if (!err) {
+              throw err;
+            } else {
+              fs.open(app_root + "/" + row.path + row.name, "w", function(err, fd) {
+                if (err) {throw err};
+                fs.write(fd, row.content, "utf8", function() {
+                  fs.close(fd);
+                });
+              });
+            }
+          });
+        }, function() {
+          resolver(app_id);
+        });
+
+      }).catch(function(err) {
+        rejecter(err);
+      });
+    });
+  }
+
+  function run_child_server(app, child_app_id) {
+    var router = express.Router();
+    var appProxy = httpProxy.createProxyServer({
+        target:'http://localhost:9999'
+    });
+    router.use('/app' + child_app_id, function (req, res) {
+      appProxy.web(req, res, function(e) {
+        res.status(500).send(String(e));
+      });
+    });
+    app.use(router);
+
+    console.log("Forking child server for app" + child_app_id);
+    return child_process.fork("./server.js", [], {cwd: "_app_source/app" + child_app_id, env: {PORT: 9999}});
+  }
+
 	function test() {
-		initialize_app({id: 1, name: "myapp1", repository: "/Users/spersinger/github/mobile-template1"}, function(err, result) {
-			console.log(err);
-			console.log(result);
-		});
 	}
+
+  function run_app(req, res, next) {
+    var app_id = req.params.app_id;
+    var app_dir = app_target + "/" + "app" + app_id;
+
+    unpack_app_files(app_id).then(function() {
+      run_child_server(req.app, app_id);
+    }).catch(next);
+  }
 
 	return {
 		initialize_app: initialize_app,
+    run_child_server: run_child_server,
+    run_app: run_app,
 		test: test
 	}
 }

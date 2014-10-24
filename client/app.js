@@ -61,6 +61,8 @@ angular.module('apper', ['ngResource',
 .controller('RootCtrl', function($rootScope, $scope, $modal, $log, AppModel) {
   $scope.apps = AppModel.query();
   $rootScope.loading = true;
+  $scope.app_id = null;
+  $scope.running = null;
 
   $scope.toggled = function(open) {
     //console.log('Dropdown is now: ', open);
@@ -73,6 +75,7 @@ angular.module('apper', ['ngResource',
   };
 
   $scope.openApp = function(app_id) {
+    $scope.app_id = app_id;
     $scope.$broadcast('openApp', app_id);
   }
 
@@ -99,6 +102,12 @@ angular.module('apper', ['ngResource',
       });
     }, function () {
       $log.info('Modal dismissed at: ' + new Date());
+    });
+  }
+
+  $scope.runApp = function() {
+    AppModel.$run({appId: $scope.app_id}).then(function() {
+      $scope.running = true;
     });
   }
 
@@ -185,7 +194,12 @@ angular.module('apper', ['ngResource',
 // ************ SERVER RESOURCES (via Ajax) *****************
 
 .factory('AppModel', function($resource) {
-  return $resource('/resource/apps/:appId', null);
+  return $resource('/resource/apps/:appId', null, {
+    'run': {
+      method: 'POST',
+      url: '/resource/apps/:appId/$run'
+    }
+  });
 })
 
 .factory('FileModel', function($resource) {
