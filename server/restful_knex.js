@@ -46,6 +46,9 @@ module.exports = function(knex) {
 
       knex(table).select(opts.select).where({id: pkid}).limit(1).then(function(rows) {
         if (rows.length > 0) {
+          if (rows[0].content) {
+            rows[0].content = rows[0].content.toString('utf8');
+          }
           res.json(rows[0]);
         } else {
           res.status(404).send("Not found");

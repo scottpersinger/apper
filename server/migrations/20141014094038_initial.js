@@ -42,7 +42,7 @@ exports.up = function(knex, Promise) {
           table.integer('app_id').notNullable();
           table.string('name').notNullable();
           table.string('path').notNullable().index();
-          table.text('content');
+          table.binary('content');
           table.string('content_type');
         });
     	} else {

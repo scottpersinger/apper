@@ -1,18 +1,22 @@
 "use strict";
 
-var popen      = require('child_process'),
-    fs         = require('fs'),
-    basename   = require('path').basename,
-    dirname    = require('path').dirname,
-    walkdir    = require('walkdir'),
-    httpProxy  = require('http-proxy'),
-    async      = require('async'),
-    Promise    = require("knex/node_modules/bluebird"),
-    app_target = '_app_source'
+var fs             = require('fs-extra'),
+    config         = require('./config'),
+    basename       = require('path').basename,
+    dirname        = require('path').dirname,
+    walkdir        = require('walkdir'),
+    httpProxy      = require('http-proxy'),
+    async          = require('async'),
+    express        = require('express'),
+    child_process  = require('child_process'),
+    Promise        = require("knex/node_modules/bluebird")
     ;
 
+var app_target     = '_app_source',
+    child_servers  = {};
+
 module.exports = function(knex) {
-	function initialize_app(app, callback) {
+	function clone_app(app, callback) {
 		console.log("Git cloning app ", app);
 
     var appDir = "app" + app.id;
@@ -24,7 +28,7 @@ module.exports = function(knex) {
 			fs.mkdirSync(app_target);
 		}
 
-		popen.exec("git clone " + app.repository + " " + appDir, {cwd: app_target}, function(err, stdout, stdin) {
+		child_process.exec("git clone " + app.repository + " " + appDir, {cwd: app_target}, function(err, stdout, stdin) {
 			if (err) {
 				callback(err);
 			} else {
@@ -61,21 +65,26 @@ module.exports = function(knex) {
 	}
 
   function unpack_app_files(app_id) {
+    console.log("Unpacking files");
     var app_root = app_target + "/" + "app" + app_id;
 
     return new Promise(function(resolver, rejecter) {
+      console.log("Inside promise, calling knex");
       return knex('files').select('*').where({app_id: app_id})
       .then(function(rows) {
-        async.eachSeries(rows, function(row) {
+        async.eachSeries(rows, function(row, continuation) {
           fs.mkdirs(app_root + "/" + row.path, function(err) {
-            if (!err) {
+            if (err) {
+              console.log("Error! ", err);
               throw err;
             } else {
-              fs.open(app_root + "/" + row.path + row.name, "w", function(err, fd) {
-                if (err) {throw err};
-                fs.write(fd, row.content, "utf8", function() {
-                  fs.close(fd);
-                });
+              console.log("Writing file ", row.name);
+              var subpath = row.path ? (row.path + "/") : "";
+              fs.writeFile(app_root + "/" + subpath + row.name, row.content, function(err) {
+                if (err) {
+                  console.log("Error writing file ", err);
+                }
+                continuation();
               });
             }
           });
@@ -94,7 +103,9 @@ module.exports = function(knex) {
     var appProxy = httpProxy.createProxyServer({
         target:'http://localhost:9999'
     });
+
     router.use('/app' + child_app_id, function (req, res) {
+      console.log("Proxy request: ", req.url);
       appProxy.web(req, res, function(e) {
         res.status(500).send(String(e));
       });
@@ -102,7 +113,23 @@ module.exports = function(knex) {
     app.use(router);
 
     console.log("Forking child server for app" + child_app_id);
-    return child_process.fork("./server.js", [], {cwd: "_app_source/app" + child_app_id, env: {PORT: 9999}});
+    var env = {
+      PORT: 9999,
+      DATABASE_URL: config.db_url
+    };
+
+    function startChildServer() {
+      child_servers[child_app_id] = 
+        child_process.fork("./server.js", [], {cwd: "_app_source/app" + child_app_id, env: env});
+    }
+
+    if (child_servers[child_app_id]) {
+      child_servers[child_app_id].on('exit', startChildServer);
+      child_servers[child_app_id].kill();
+    } else {
+      startChildServer();
+    }
+
   }
 
 	function test() {
@@ -114,11 +141,12 @@ module.exports = function(knex) {
 
     unpack_app_files(app_id).then(function() {
       run_child_server(req.app, app_id);
+      res.send('OK');
     }).catch(next);
   }
 
 	return {
-		initialize_app: initialize_app,
+		initialize_app: clone_app,
     run_child_server: run_child_server,
     run_app: run_app,
 		test: test

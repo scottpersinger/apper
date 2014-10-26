@@ -106,8 +106,9 @@ angular.module('apper', ['ngResource',
   }
 
   $scope.runApp = function() {
-    AppModel.$run({appId: $scope.app_id}).then(function() {
+    new AppModel().$run({appId: $scope.app_id}, function() {
       $scope.running = true;
+      $rootScope.$broadcast("appRunning", {appId: $scope.app_id});
     });
   }
 
@@ -132,9 +133,10 @@ angular.module('apper', ['ngResource',
 
 })
 
-.controller('EditorCtrl', function($scope, $location, AppModel, FileModel) {
+.controller('EditorCtrl', function($rootScope, $scope, $location, AppModel, FileModel) {
   $scope.tagtree = {}; // Have to initialize this here or $watch doesn't work
   $scope.fileTree = [];
+  $scope.app_path = null;
 
   $scope.fileNode = {content:''};
 
@@ -167,6 +169,13 @@ angular.module('apper', ['ngResource',
     });
   });
 
+  $rootScope.$on('appRunning', function(event, args) {
+    $scope.app_path = "/app" + args.appId + "/";
+    setTimeout(function() {
+      document.getElementsByTagName('iframe')[0].src = $scope.app_path;
+    }, 1000);
+  });
+
   $scope.$watch( 'tagtree.currentNode', function( newObj, oldObj ) {
       if( $scope.tagtree && angular.isObject($scope.tagtree.currentNode) ) {
         console.log( $scope.tagtree.currentNode.name );
@@ -194,10 +203,11 @@ angular.module('apper', ['ngResource',
 // ************ SERVER RESOURCES (via Ajax) *****************
 
 .factory('AppModel', function($resource) {
-  return $resource('/resource/apps/:appId', null, {
+  return $resource('/resource/apps/:appId', {appId: null}, {
     'run': {
       method: 'POST',
-      url: '/resource/apps/:appId/$run'
+      params: {appId: null},
+      url: '/resource/apps/:appId/run'
     }
   });
 })
